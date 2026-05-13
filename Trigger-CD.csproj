@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<InvariantGlobalization>true</InvariantGlobalization>
+		<RootNamespace>App</RootNamespace>	
+		<UserSecretsId>fbf1cf9b-0e4f-4a3a-9289-ed54b7229b1b</UserSecretsId>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Content Update="appsettings.json" CopyToPublishDirectory="Never" />
+		<Content Remove="data\**" />
+		<Compile Remove="data\**" />
+		<Content Remove="Release\**" />
+		<Compile Remove="Release\**" />
+	</ItemGroup>
+
+</Project>
