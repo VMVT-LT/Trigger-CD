@@ -7,28 +7,24 @@ public static class Files {
 	public static void CleanDir(string dir, bool recursive, Log log, List<string>? except = null, string? root = null) {
 		try {
 			root ??= dir;
-			if (Directory.Exists(dir)) {
-				foreach (string file in Directory.GetFiles(dir))
-					if (except is null || !except.Contains(GetRelative(file, root)))
-						File.Delete(file);
-				if (except is null || !except.Contains(GetRelative(dir, root)))
-					foreach (string subDirectory in Directory.GetDirectories(dir))
-						CleanDir(subDirectory, recursive, log, except, root);
-
-				if (root is null) {
-					try { Directory.Delete(dir, false); } catch (Exception) { } //not recursive
+			if (!Directory.Exists(dir)) return;
+			foreach (string file in Directory.GetFiles(dir)) {
+				string relativePath = GetRelative(file, root);
+				if (except == null || !except.Contains(relativePath)) File.Delete(file);
+			}
+			foreach (string subDir in Directory.GetDirectories(dir)) {
+				string relativePath = GetRelative(subDir, root);
+				if (except != null && except.Contains(relativePath)) continue;
+				if (recursive) CleanDir(subDir, true, log, except, root);
+				if (Directory.GetFiles(subDir, "*", SearchOption.AllDirectories).Length == 0) {
+					try { Directory.Delete(subDir, false); } catch { }
 				}
 			}
 		}
-		catch (Exception ex) { log.Print("Error", new { Error = "CleanDir", ex.Message, ex.StackTrace }); throw; }
+		catch (Exception ex) { log.Print("Error", new { Error = "CleanDir", ex.Message }); }
 	}
 
-	public static string GetRelative(string path, string dir) {
-		try {
-			return path[((Path.GetDirectoryName(dir + "//") ?? "").Length + 1)..];
-		}
-		catch (Exception) { return ""; }
-	}
+	public static string GetRelative(string path, string root) => Path.GetRelativePath(root, path).Replace('\\', '/');
 
 	private static readonly string IdPath = "data/id.incr";
 	private static long _currentId = -1;
