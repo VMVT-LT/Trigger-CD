@@ -18,23 +18,33 @@ public class GitHub {
 	}
 
 
-	public async Task<bool> Download(string path, Log log, bool force = false, int retry = 0, bool debug=true) {
+	public async Task<bool> Download(string path, Log log, bool force = false, int retry = 0, bool debug=true, long? artifactId=null) {
 		if (Repo is not null && Name is not null && App is not null) {
-			using var req = new HttpRequestMessage(HttpMethod.Get, $"https://api.github.com/repos/{Org}/{Repo}/actions/artifacts?name={Name}&per_page=1");
+			var apiUrl = artifactId.HasValue
+				? $"https://api.github.com/repos/{Org}/{Repo}/actions/artifacts/{artifactId.Value}"
+				: $"https://api.github.com/repos/{Org}/{Repo}/actions/artifacts?name={Name}&per_page=1";
+			using var req = new HttpRequestMessage(HttpMethod.Get, apiUrl);
 			if (Token is not null) req.Headers.Authorization = new("token", Token);
 
 			try {
-				if (debug) log.Print("Debug",$"Git - Url https://api.github.com/repos/{Org}/{Repo}/actions/artifacts?name={Name}&per_page=1");
+				if (debug) log.Print("Debug",$"Git - Url {apiUrl}");
 				using var response = await HClient.SendAsync(req);
 				if (debug) log.Print("Debug", $"Git - Status {response.StatusCode}");
 				if (response.IsSuccessStatusCode) {
-					var dta = await response.Content.ReadFromJsonAsync<GHArtifacts>();
-					if (debug) log.Print("Debug", $"Git - Artifacts {JsonSerializer.Serialize(dta)}");
-					var af = dta?.Artifacts?.FirstOrDefault();
+					GHArtifacts? dta = null;
+					GHArtifact? af;
+					if (artifactId.HasValue) {
+						af = await response.Content.ReadFromJsonAsync<GHArtifact>();
+					}
+					else {
+						dta = await response.Content.ReadFromJsonAsync<GHArtifacts>();
+						af = dta?.Artifacts?.FirstOrDefault();
+					}
+					if (debug) log.Print("Debug", $"Git - Artifacts {JsonSerializer.Serialize(artifactId.HasValue ? (object?)af : dta)}");
 					if (af is not null) {
 						var vrs = Version.Get(App);
 						vrs.Log ??= [];
-						if (force || vrs.Id < af.Id) {
+						if (force || artifactId.HasValue || vrs.Id < af.Id) {
 							if (debug) log.Print("Debug", $"Git - Download {af.Download}");
 							using var dlr = new HttpRequestMessage(HttpMethod.Get, af.Download);
 							if (Token is not null) dlr.Headers.Authorization = new("token", Token);
@@ -67,7 +77,7 @@ public class GitHub {
 							if (retry > 0) {
 								log.Print("Git", $"Waiting ({retry})");
 								Thread.Sleep(1000); retry--;
-								return await Download(path, log, force, retry, debug);
+								return await Download(path, log, force, retry, debug, artifactId);
 							}
 							else {
 								log.Print("Git", $"No new artifacts ({vrs.Id})");

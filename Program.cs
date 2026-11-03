@@ -10,7 +10,7 @@ var cfg = new Config(app);
 if (!Directory.Exists("data")) { Directory.CreateDirectory("data"); }
 if (!Directory.Exists("data/files")) { Directory.CreateDirectory("data/files"); }
 
-app.MapGet("/{app}/{key?}", async (HttpContext ctx, string app, string? key, string? force=null) => {
+app.MapGet("/{app}/{key?}", async (HttpContext ctx, string app, string? key, string? force=null, long? artifactId=null) => {
 	if(cfg.Apps.TryGetValue(app.ToLower(), out var cfgApp) && cfgApp is not null) {
 		if(cfgApp.Key==key && cfgApp.Path is not null) {
 			var rp = cfgApp.Repo;
@@ -27,7 +27,7 @@ app.MapGet("/{app}/{key?}", async (HttpContext ctx, string app, string? key, str
 						var debug = cfgApp.Debug ?? false;
 						await Task.Delay(cfg.Delay * 1000);
 
-						if (await rp.Download(cfgApp.Path, log, (force == "" || force?.ToLower() == "true"), cfg.WaitTime, debug)) {
+						if (await rp.Download(cfgApp.Path, log, (force == "" || force?.ToLower() == "true"), cfg.WaitTime, debug, artifactId)) {
 
 							try {
 								if (!string.IsNullOrEmpty(cfgApp.Service)) {
